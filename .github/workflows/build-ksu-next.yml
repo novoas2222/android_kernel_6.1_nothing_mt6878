@@ -67,13 +67,12 @@ jobs:
           echo "CONFIG_HAVE_KPROBES=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/gki_defconfig
 
-      - name: Debug Directory Structures
+      - name: Run Kleaf Bazel Build
         working-directory: gki-build
         run: |
-          echo "=== Root contents ==="
-          ls -la
-          echo "=== Build directory contents ==="
-          ls -la build/
+          # Run the hermetic Bazel engine pointing to the main common GKI aarch64 distribution target
+          # Using --config=fast to speed up and minimize environment mismatches
+          ./common/tools/bazel run --config=fast //common:gki_aarch64_dist
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
