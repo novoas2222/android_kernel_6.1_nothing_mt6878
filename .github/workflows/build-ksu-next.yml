@@ -1,0 +1,85 @@
+name: Build CMF Phone 1 Kernel with KernelSU Next
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache flex glibc-source libelf-dev libssl-dev libcrypto++-dev bio-linux-fw python3 python3-pip git-core repo
+
+      - name: Setup Workspace Directories
+        run: |
+          mkdir -p gki-build/common
+          mkdir -p gki-build/build
+          mkdir -p gki-build/modules
+          mkdir -p gki-build/device-modules
+
+      - name: Checkout Main Kernel (Current Fork)
+        uses: actions/checkout@v4
+        with:
+          path: gki-build/common
+          ref: mt6878/Tetris/16b
+
+      - name: Checkout Build Module Repo
+        uses: actions/checkout@v4
+        with:
+          repository: NothingOSS/android_kernel_build_nothing_mt6878
+          ref: master
+          path: gki-build/build
+
+      - name: Checkout Kernel Modules Repo
+        uses: actions/checkout@v4
+        with:
+          repository: NothingOSS/android_kernel_modules_nothing_mt6878
+          ref: mt6878/Tetris/16b
+          path: gki-build/modules
+
+      - name: Checkout Device Modules Repo
+        uses: actions/checkout@v4
+        with:
+          repository: NothingOSS/android_kernel_device_modules_6.1_nothing_mt6878
+          ref: mt6878/Tetris/16b
+          path: gki-build/device-modules
+
+      - name: Integrate KernelSU Next
+        working-directory: gki-build/common
+        run: |
+          # Download and install KernelSU Next via its official automated setup script
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -s main
+          
+          # Inject KernelSU configurations safely into gki_defconfig
+          echo "CONFIG_KPROBES=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_HAVE_KPROBES=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/gki_defconfig
+
+      - name: Run Kleaf Bazel Build
+        working-directory: gki-build
+        run: |
+          # Invoke the Kleaf build framework engine targeting gki_aarch64
+          # Note: If Nothing OS utilizes a custom build target wrapper inside their 'build' repo,
+          # change this command to point to their script, e.g., `./build/build.sh` or `tools/bazel run //common:gki_aarch64_dist`
+          
+          ./build/build.sh --config=gki
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMF-Tetris-KernelSU-Next
+          path: |
+            gki-build/out/android6.1-*/dist/Image
+            gki-build/out/android6.1-*/dist/*.ko
