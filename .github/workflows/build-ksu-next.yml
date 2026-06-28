@@ -60,21 +60,20 @@ jobs:
         working-directory: gki-build/common
         run: |
           # Download and install KernelSU Next via its official automated setup script
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s main
           
           # Inject KernelSU configurations safely into gki_defconfig
           echo "CONFIG_KPROBES=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_HAVE_KPROBES=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/gki_defconfig
 
-      - name: Run Kleaf Bazel Build
+      - name: Debug Directory Structures
         working-directory: gki-build
         run: |
-          # Invoke the Kleaf build framework engine targeting gki_aarch64
-          # Note: If Nothing OS utilizes a custom build target wrapper inside their 'build' repo,
-          # change this command to point to their script, e.g., `./build/build.sh` or `tools/bazel run //common:gki_aarch64_dist`
-          
-          ./build/build.sh --config=gki
+          echo "=== Root contents ==="
+          ls -la
+          echo "=== Build directory contents ==="
+          ls -la build/
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
