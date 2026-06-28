@@ -21,6 +21,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bison flex libelf-dev libssl-dev python3 git repo
+          # Install Bazel globally to avoid relying on missing repository tool wrappers
+          sudo apt-get install -y bazel || true
 
       - name: Setup Workspace Directories
         run: |
@@ -70,9 +72,20 @@ jobs:
       - name: Run Kleaf Bazel Build
         working-directory: gki-build
         run: |
-          # Run the hermetic Bazel engine pointing to the main common GKI aarch64 distribution target
-          # Using --config=fast to speed up and minimize environment mismatches
-          ./common/tools/bazel run --config=fast //common:gki_aarch64_dist
+          # Link essential build definitions to the root workspace level where Bazel expects them
+          ln -sf common/WORKSPACE WORKSPACE
+          ln -sf common/BUILD.bazel BUILD.bazel
+          
+          # Find the available bazel execution binary (either common/tools/bazel, build/bazel, or global)
+          BAZEL_BIN="bazel"
+          if [ -f "common/tools/bazel" ]; then
+              BAZEL_BIN="./common/tools/bazel"
+          elif [ -f "build/bazel" ]; then
+              BAZEL_BIN="./build/bazel"
+          fi
+          
+          # Run the distribution compilation build target
+          $BAZEL_BIN run --config=fast //common:gki_aarch64_dist
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
