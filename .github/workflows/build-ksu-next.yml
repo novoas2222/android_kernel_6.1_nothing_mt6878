@@ -21,15 +21,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bison flex libelf-dev libssl-dev python3 git repo
-          # Install Bazel globally to avoid relying on missing repository tool wrappers
-          sudo apt-get install -y bazel || true
 
       - name: Setup Workspace Directories
         run: |
           mkdir -p gki-build/common
           mkdir -p gki-build/build
           mkdir -p gki-build/modules
-          mkdir -p gki-build/device-modules
+          mkdir -p gki-build/kernel_device_modules-6.1
 
       - name: Checkout Main Kernel (Current Fork)
         uses: actions/checkout@v4
@@ -56,7 +54,7 @@ jobs:
         with:
           repository: NothingOSS/android_kernel_device_modules_6.1_nothing_mt6878
           ref: mt6878/Tetris/16b
-          path: gki-build/device-modules
+          path: gki-build/kernel_device_modules-6.1
 
       - name: Integrate KernelSU Next
         working-directory: gki-build/common
@@ -72,20 +70,9 @@ jobs:
       - name: Run Kleaf Bazel Build
         working-directory: gki-build
         run: |
-          # Link essential build definitions to the root workspace level where Bazel expects them
-          ln -sf common/WORKSPACE WORKSPACE
-          ln -sf common/BUILD.bazel BUILD.bazel
-          
-          # Find the available bazel execution binary (either common/tools/bazel, build/bazel, or global)
-          BAZEL_BIN="bazel"
-          if [ -f "common/tools/bazel" ]; then
-              BAZEL_BIN="./common/tools/bazel"
-          elif [ -f "build/bazel" ]; then
-              BAZEL_BIN="./build/bazel"
-          fi
-          
-          # Run the distribution compilation build target
-          $BAZEL_BIN run --config=fast //common:gki_aarch64_dist
+          # Now that kernel_device_modules-6.1 is in place, the build script link works!
+          chmod +x build/build.sh
+          ./build/build.sh --config=gki
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
