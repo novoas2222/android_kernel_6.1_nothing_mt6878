@@ -70,8 +70,14 @@ jobs:
       - name: Run Kleaf Bazel Build
         working-directory: gki-build
         run: |
-          # Now that kernel_device_modules-6.1 is in place, the build script link works!
+          # Copy target environment configuration files from the common directory to workspace root
+          cp common/build.config* . 2>/dev/null || cp common/build.config .
+          
+          # Ensure execution bits are set across the scripts
           chmod +x build/build.sh
+          chmod +x build/_setup_env.sh
+          
+          # Execute NothingOSS wrapper script targeting the general GKI configuration
           ./build/build.sh --config=gki
 
       - name: Upload Build Artifacts
